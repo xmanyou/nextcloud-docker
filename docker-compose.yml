@@ -1,0 +1,54 @@
+version: '3.6'
+services:
+  db:
+    image: postgres:latest
+    restart: always
+    volumes:
+      - db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=nextcloud!
+    container_name: db
+
+  redis:
+    image: redis:alpine
+    command: redis-server --appendonly yes --appendfsync always --save 900 1 --save 300 10 --save 60 1000     
+    volumes:
+      - redis:/var/lib/postgresql/data
+    restart: always
+    container_name: redis
+
+  app:
+    image: nextcloud:fpm
+    links:
+      - db
+      - redis
+    container_name: nextcloud
+    volumes:
+      - nextcloud:/var/www/html
+    restart: always
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_DB=nextcloud
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=nextcloud!
+      - REDIS_HOST=redis
+    depends_on:
+      - db
+      - redis
+
+  web:
+    build: ./web
+    restart: always
+    container_name: web
+    ports:
+      - 9999:80
+    volumes:
+      - nextcloud:/var/www/html:ro
+    depends_on:
+      - app
+
+volumes:
+  redis:
+  db:
+  nextcloud:
